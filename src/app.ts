@@ -1,12 +1,7 @@
 import cors from 'cors'
 import express, { type ErrorRequestHandler } from 'express'
-import * as helmetModule from 'helmet'
 import { z } from 'zod'
 import type { TodoRepository } from './types.js'
-
-// Some serverless builders resolve Helmet's ESM default as a module namespace.
-// Normalizing both shapes keeps the middleware callable in Node and on Vercel.
-const helmet = (helmetModule.default ?? helmetModule) as typeof helmetModule.default
 
 const idSchema = z.string().uuid()
 const todoFields = {
@@ -20,7 +15,19 @@ const updateSchema = z.object({ ...todoFields, title: todoFields.title.optional(
 
 export function createApp(repository: TodoRepository, clientUrl = 'http://localhost:5173') {
   const app = express()
-  app.use(helmet())
+  app.disable('x-powered-by')
+  app.use((_req, res, next) => {
+    res.set({
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Referrer-Policy': 'no-referrer',
+      'X-Content-Type-Options': 'nosniff',
+      'X-DNS-Prefetch-Control': 'off',
+      'X-Download-Options': 'noopen',
+      'X-Frame-Options': 'SAMEORIGIN',
+      'X-Permitted-Cross-Domain-Policies': 'none',
+    })
+    next()
+  })
   app.use(cors({ origin: clientUrl }))
   app.use(express.json({ limit: '10kb' }))
 
