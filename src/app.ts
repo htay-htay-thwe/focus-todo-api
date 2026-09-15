@@ -1,6 +1,6 @@
 import cors from 'cors'
 import express, { type ErrorRequestHandler } from 'express'
-import helmet from 'helmet'
+// import helmet from 'helmet'
 import { z } from 'zod'
 import type { TodoRepository } from './types.js'
 
@@ -16,7 +16,7 @@ const updateSchema = z.object({ ...todoFields, title: todoFields.title.optional(
 
 export function createApp(repository: TodoRepository, clientUrl = 'http://localhost:5173') {
   const app = express()
-  app.use(helmet())
+  // app.use(helmet())
   app.use(cors({ origin: clientUrl }))
   app.use(express.json({ limit: '10kb' }))
 

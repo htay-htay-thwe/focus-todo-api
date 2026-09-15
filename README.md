@@ -15,6 +15,8 @@ npm run dev
 
 The API starts at http://localhost:3000/api. Check it with `GET /api/health`.
 
+For a temporary UI demo on a machine without PostgreSQL or Docker, run `DEMO_MODE=true npm run dev`. Demo data survives browser refreshes but resets when the API process stops; normal mode always uses PostgreSQL.
+
 ## REST endpoints
 
 | Method | Endpoint | Purpose |
