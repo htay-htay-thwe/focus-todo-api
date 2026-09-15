@@ -1,5 +1,6 @@
 import { Pool } from 'pg'
 import type { CreateTodoInput, Todo, TodoRepository, UpdateTodoInput } from '../types.js'
+import { schemaSql } from './schema.js'
 
 type TodoRow = {
   id: string; title: string; description: string; completed: boolean; priority: Todo['priority'];
@@ -18,19 +19,31 @@ const mapRow = (row: TodoRow): Todo => ({
 })
 
 export class PostgresTodoRepository implements TodoRepository {
+  private schemaReady: Promise<unknown> | null = null
+
   constructor(private readonly pool: Pool) {}
 
+  private ready() {
+    // Lazily initialize on the first request. This avoids connecting during the
+    // Vercel build and reuses one promise for concurrent cold-start requests.
+    this.schemaReady ??= this.pool.query(schemaSql)
+    return this.schemaReady
+  }
+
   async findAll() {
+    await this.ready()
     const { rows } = await this.pool.query<TodoRow>('SELECT * FROM todos ORDER BY completed ASC, created_at DESC')
     return rows.map(mapRow)
   }
 
   async findById(id: string) {
+    await this.ready()
     const { rows } = await this.pool.query<TodoRow>('SELECT * FROM todos WHERE id = $1', [id])
     return rows[0] ? mapRow(rows[0]) : null
   }
 
   async create(input: CreateTodoInput) {
+    await this.ready()
     const { rows } = await this.pool.query<TodoRow>(
       `INSERT INTO todos (title, description, priority, due_date)
        VALUES ($1, $2, $3, $4) RETURNING *`,
@@ -40,6 +53,7 @@ export class PostgresTodoRepository implements TodoRepository {
   }
 
   async update(id: string, input: UpdateTodoInput) {
+    await this.ready()
     const current = await this.findById(id)
     if (!current) return null
     const next = { ...current, ...input }
@@ -52,11 +66,13 @@ export class PostgresTodoRepository implements TodoRepository {
   }
 
   async remove(id: string) {
+    await this.ready()
     const result = await this.pool.query('DELETE FROM todos WHERE id = $1', [id])
     return result.rowCount === 1
   }
 
   async clearCompleted() {
+    await this.ready()
     const result = await this.pool.query('DELETE FROM todos WHERE completed = TRUE')
     return result.rowCount ?? 0
   }

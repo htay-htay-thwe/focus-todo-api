@@ -1,6 +1,9 @@
 import cors from 'cors'
 import express, { type ErrorRequestHandler } from 'express'
+import { Pool } from 'pg'
 import { z } from 'zod'
+import { MemoryTodoRepository } from './db/memoryTodoRepository.js'
+import { PostgresTodoRepository } from './db/postgresTodoRepository.js'
 import type { TodoRepository } from './types.js'
 
 const idSchema = z.string().uuid()
@@ -72,3 +75,15 @@ export function createApp(repository: TodoRepository, clientUrl = 'http://localh
   app.use(errorHandler)
   return app
 }
+
+// Vercel detects src/app.ts as the Express entry point and requires a default
+// export that is the actual request handler. Pool connections are established
+// lazily by pg, so importing this module during a build does not access the DB.
+const vercelRepository: TodoRepository = process.env.DEMO_MODE === 'true'
+  ? new MemoryTodoRepository()
+  : new PostgresTodoRepository(new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.VERCEL ? { rejectUnauthorized: false } : undefined,
+    }))
+
+export default createApp(vercelRepository, process.env.CLIENT_URL)

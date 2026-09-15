@@ -1,6 +1,4 @@
 import dotenv from 'dotenv'
-import { readFile } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
 import { Pool } from 'pg'
 import { createApp } from './app.js'
 import { PostgresTodoRepository } from './db/postgresTodoRepository.js'
@@ -14,10 +12,6 @@ const demoMode = process.env.DEMO_MODE === 'true'
 const pool = demoMode ? null : new Pool({ connectionString: process.env.DATABASE_URL })
 
 async function start() {
-  if (pool) {
-    const schemaPath = fileURLToPath(new URL('./db/schema.sql', import.meta.url))
-    await pool.query(await readFile(schemaPath, 'utf8'))
-  }
   const repository = pool ? new PostgresTodoRepository(pool) : new MemoryTodoRepository()
   const app = createApp(repository, process.env.CLIENT_URL)
   app.listen(port, () => console.log(`Focus API ready at http://localhost:${port}${demoMode ? ' (demo mode)' : ''}`))
