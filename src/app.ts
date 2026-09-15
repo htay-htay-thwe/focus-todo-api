@@ -1,8 +1,12 @@
 import cors from 'cors'
 import express, { type ErrorRequestHandler } from 'express'
-import helmet = require('helmet');
+import * as helmetModule from 'helmet'
 import { z } from 'zod'
 import type { TodoRepository } from './types.js'
+
+// Some serverless builders resolve Helmet's ESM default as a module namespace.
+// Normalizing both shapes keeps the middleware callable in Node and on Vercel.
+const helmet = (helmetModule.default ?? helmetModule) as typeof helmetModule.default
 
 const idSchema = z.string().uuid()
 const todoFields = {
